@@ -70,9 +70,7 @@ const DonationDialog = ({ title, campaignId, trigger }: DonationDialogProps) => 
       const encryptedBytes = new TextEncoder().encode(JSON.stringify(donationData));
       
       // Call smart contract with encrypted data
-      await makeDonation({
-        args: [campaignId as `0x${string}`, encryptedBytes],
-      });
+      await makeDonation(campaignId, encryptedBytes);
       
       toast({
         title: "Donation Submitted Successfully",

@@ -1,39 +1,40 @@
-import { useContract, useContractRead, useContractWrite } from 'wagmi';
+import { useReadContract, useWriteContract, useAccount } from 'wagmi';
 import { CipherKindGlowABI } from '../lib/contract';
 
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || '0x0000000000000000000000000000000000000000'; // Replace with deployed contract address
 
-export const useCipherKindGlow = () => {
-  const { data: contract } = useContract({
-    address: CONTRACT_ADDRESS as `0x${string}`,
-    abi: CipherKindGlowABI,
-  });
-
-  return contract;
-};
-
 export const useCreateCampaign = () => {
-  const { write, isLoading, error } = useContractWrite({
-    address: CONTRACT_ADDRESS as `0x${string}`,
-    abi: CipherKindGlowABI,
-    functionName: 'createCampaign',
-  });
+  const { writeContract, isPending, error } = useWriteContract();
 
-  return { createCampaign: write, isLoading, error };
+  const createCampaign = async (title: string, description: string, encryptedTargetAmount: string) => {
+    return writeContract({
+      address: CONTRACT_ADDRESS as `0x${string}`,
+      abi: CipherKindGlowABI,
+      functionName: 'createCampaign',
+      args: [title, description, encryptedTargetAmount],
+    });
+  };
+
+  return { createCampaign, isLoading: isPending, error };
 };
 
 export const useMakeDonation = () => {
-  const { write, isLoading, error } = useContractWrite({
-    address: CONTRACT_ADDRESS as `0x${string}`,
-    abi: CipherKindGlowABI,
-    functionName: 'makeDonation',
-  });
+  const { writeContract, isPending, error } = useWriteContract();
 
-  return { makeDonation: write, isLoading, error };
+  const makeDonation = async (campaignId: string, encryptedAmount: string) => {
+    return writeContract({
+      address: CONTRACT_ADDRESS as `0x${string}`,
+      abi: CipherKindGlowABI,
+      functionName: 'makeDonation',
+      args: [campaignId as `0x${string}`, encryptedAmount],
+    });
+  };
+
+  return { makeDonation, isLoading: isPending, error };
 };
 
 export const useGetCampaigns = () => {
-  const { data: campaigns, isLoading, error } = useContractRead({
+  const { data: campaigns, isLoading, error } = useReadContract({
     address: CONTRACT_ADDRESS as `0x${string}`,
     abi: CipherKindGlowABI,
     functionName: 'getAllCampaigns',
@@ -43,7 +44,7 @@ export const useGetCampaigns = () => {
 };
 
 export const useGetCampaign = (campaignId: string) => {
-  const { data: campaign, isLoading, error } = useContractRead({
+  const { data: campaign, isLoading, error } = useReadContract({
     address: CONTRACT_ADDRESS as `0x${string}`,
     abi: CipherKindGlowABI,
     functionName: 'getCampaign',
@@ -54,7 +55,7 @@ export const useGetCampaign = (campaignId: string) => {
 };
 
 export const useGetPlatformStats = () => {
-  const { data: stats, isLoading, error } = useContractRead({
+  const { data: stats, isLoading, error } = useReadContract({
     address: CONTRACT_ADDRESS as `0x${string}`,
     abi: CipherKindGlowABI,
     functionName: 'getPlatformStats',
