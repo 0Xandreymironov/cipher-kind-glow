@@ -2,7 +2,7 @@ import { useReadContract, useWriteContract, useAccount } from 'wagmi';
 import { CipherKindGlowABI } from '../lib/contract';
 import { useZamaInstance } from './useZamaInstance';
 
-const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || '0x20197a609e36bd5a3B762F5Fdd973b9185B1144c'; // Replace with deployed contract address
+const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || '0x334f18ae72d7ECef7C4079AAe4C7AbE2AdA989A5'; // Replace with deployed contract address
 
 export const useCreateCampaign = () => {
   const { writeContractAsync, isPending, error } = useWriteContract();
