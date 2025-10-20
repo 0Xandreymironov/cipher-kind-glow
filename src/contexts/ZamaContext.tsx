@@ -1,27 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-
-// Follow fhed-shield-secure: only use UMD global injected via index.html
-// Wait for window.RelayerSDK to be ready (in case script loads slightly after React mounts)
-const loadRelayer = async () => {
-  const get = () => (globalThis as any)?.RelayerSDK;
-  let sdk = get();
-  if (sdk) return sdk;
-  // wait up to 2s
-  await new Promise<void>((resolve, reject) => {
-    const started = Date.now();
-    const t = setInterval(() => {
-      sdk = get();
-      if (sdk) {
-        clearInterval(t);
-        resolve();
-      } else if (Date.now() - started > 2000) {
-        clearInterval(t);
-        reject(new Error('RelayerSDK UMD not found'));
-      }
-    }, 50);
-  });
-  return get();
-};
+import { createInstance, initSDK, SepoliaConfig } from '@zama-fhe/relayer-sdk/bundle';
 
 interface ZamaContextType {
   instance: any;
@@ -65,8 +43,6 @@ export const ZamaProvider = ({ children }: ZamaProviderProps) => {
       }
 
       console.log('🔄 Step 1: Initializing SDK...');
-      const lib = await loadRelayer();
-      const { initSDK, createInstance, SepoliaConfig } = pickSDK(lib);
       await initSDK();
       console.log('✅ SDK initialized successfully');
 
