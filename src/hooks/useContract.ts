@@ -90,11 +90,14 @@ export const useMakeDonation = () => {
       const proof = `0x${Array.from(encryptedInput.inputProof as Uint8Array)
         .map(b => b.toString(16).padStart(2, '0')).join('')}`;
 
+      // Convert campaignId to bytes32 format
+      const campaignIdBytes32 = campaignId.startsWith('0x') ? campaignId : `0x${campaignId}`;
+      
       console.log('📝 Calling smart contract makeDonation...');
       console.log('📊 Contract details:', {
         address: CONTRACT_ADDRESS,
         functionName: 'makeDonation',
-        args: [campaignId, amountHandle, proof]
+        args: [campaignIdBytes32, amountHandle, proof]
       });
       
       // Use writeContractAsync like aidwell-connect
@@ -102,7 +105,7 @@ export const useMakeDonation = () => {
         address: CONTRACT_ADDRESS as `0x${string}`,
         abi: CipherKindGlowABI,
         functionName: 'makeDonation',
-        args: [campaignId as `0x${string}`, amountHandle, proof],
+        args: [campaignIdBytes32 as `0x${string}`, amountHandle, proof],
       } as any);
       
       console.log('🎉 Donation transaction submitted:', result);
