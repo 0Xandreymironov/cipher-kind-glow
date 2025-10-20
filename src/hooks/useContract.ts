@@ -20,11 +20,28 @@ export const useCreateCampaign = () => {
       input.add32(BigInt(targetAmount));
       const encryptedInput = await input.encrypt();
 
+      // Convert Uint8Array handles to 32-byte hex strings
+      const convertToBytes32 = (handle: Uint8Array): string => {
+        const hex = `0x${Array.from(handle)
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('')}`;
+        if (hex.length < 66) {
+          return hex.padEnd(66, '0');
+        } else if (hex.length > 66) {
+          return hex.substring(0, 66);
+        }
+        return hex;
+      };
+
+      const targetAmountHandle = convertToBytes32(encryptedInput.handles[0]);
+      const proof = `0x${Array.from(encryptedInput.inputProof as Uint8Array)
+        .map(b => b.toString(16).padStart(2, '0')).join('')}`;
+
       return await writeContractAsync({
         address: CONTRACT_ADDRESS as `0x${string}`,
         abi: CipherKindGlowABI,
         functionName: 'createCampaign',
-        args: [title, description, encryptedInput.handles[0], encryptedInput.inputProof],
+        args: [title, description, targetAmountHandle, proof],
       } as any);
     } catch (err) {
       console.error('Error creating campaign:', err);
@@ -55,11 +72,29 @@ export const useMakeDonation = () => {
       const encryptedInput = await input.encrypt();
       console.log('✅ Encrypted input created:', { handles: encryptedInput.handles.length });
 
+      // Convert Uint8Array handles to 32-byte hex strings like aidwell-connect
+      const convertToBytes32 = (handle: Uint8Array): string => {
+        const hex = `0x${Array.from(handle)
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('')}`;
+        // Ensure exactly 32 bytes (66 characters including 0x)
+        if (hex.length < 66) {
+          return hex.padEnd(66, '0');
+        } else if (hex.length > 66) {
+          return hex.substring(0, 66);
+        }
+        return hex;
+      };
+
+      const amountHandle = convertToBytes32(encryptedInput.handles[0]);
+      const proof = `0x${Array.from(encryptedInput.inputProof as Uint8Array)
+        .map(b => b.toString(16).padStart(2, '0')).join('')}`;
+
       console.log('📝 Calling smart contract makeDonation...');
       console.log('📊 Contract details:', {
         address: CONTRACT_ADDRESS,
         functionName: 'makeDonation',
-        args: [campaignId, encryptedInput.handles[0], encryptedInput.inputProof]
+        args: [campaignId, amountHandle, proof]
       });
       
       // Use writeContractAsync like aidwell-connect
@@ -67,7 +102,7 @@ export const useMakeDonation = () => {
         address: CONTRACT_ADDRESS as `0x${string}`,
         abi: CipherKindGlowABI,
         functionName: 'makeDonation',
-        args: [campaignId as `0x${string}`, encryptedInput.handles[0], encryptedInput.inputProof],
+        args: [campaignId as `0x${string}`, amountHandle, proof],
       } as any);
       
       console.log('🎉 Donation transaction submitted:', result);
