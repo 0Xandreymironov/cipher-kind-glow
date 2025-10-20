@@ -2,7 +2,7 @@ import { useReadContract, useWriteContract, useAccount } from 'wagmi';
 import { CipherKindGlowABI } from '../lib/contract';
 import { useZamaInstance } from './useZamaInstance';
 
-const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || '0x334f18ae72d7ECef7C4079AAe4C7AbE2AdA989A5'; // Replace with deployed contract address
+const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || '0x12f912e32852b802f71BfeD1943114b7CE9f29d9'; // Replace with deployed contract address
 
 export const useCreateCampaign = () => {
   const { writeContractAsync, isPending, error } = useWriteContract();
@@ -111,19 +111,11 @@ export const useMakeDonation = () => {
       });
       
       // Use writeContractAsync like aidwell-connect
-      console.log('🔄 About to call writeContractAsync...');
-      console.log('🔍 Final parameters:', {
-        campaignIdBytes32,
-        amountHandle,
-        proof: proof.substring(0, 20) + '...' // Truncate for logging
-      });
-      
       const result = await writeContractAsync({
         address: CONTRACT_ADDRESS as `0x${string}`,
         abi: CipherKindGlowABI,
         functionName: 'makeDonation',
         args: [campaignIdBytes32 as `0x${string}`, amountHandle, proof],
-        gas: 500000n, // Add explicit gas limit for FHE operations
       } as any);
       
       console.log('🎉 Donation transaction submitted:', result);
