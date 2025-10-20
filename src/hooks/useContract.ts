@@ -112,11 +112,18 @@ export const useMakeDonation = () => {
       
       // Use writeContractAsync like aidwell-connect
       console.log('🔄 About to call writeContractAsync...');
+      console.log('🔍 Final parameters:', {
+        campaignIdBytes32,
+        amountHandle,
+        proof: proof.substring(0, 20) + '...' // Truncate for logging
+      });
+      
       const result = await writeContractAsync({
         address: CONTRACT_ADDRESS as `0x${string}`,
         abi: CipherKindGlowABI,
         functionName: 'makeDonation',
         args: [campaignIdBytes32 as `0x${string}`, amountHandle, proof],
+        gas: 500000n, // Add explicit gas limit for FHE operations
       } as any);
       
       console.log('🎉 Donation transaction submitted:', result);
