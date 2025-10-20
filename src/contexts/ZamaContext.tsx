@@ -9,8 +9,14 @@ const loadRelayer = async () => {
   }
   // Fallback to dynamic import for dev/local environments
   try {
-    const mod: any = await import('@zama-fhe/relayer-sdk/bundle');
-    return mod;
+    if (import.meta && (import.meta as any).env && (import.meta as any).env.PROD) {
+      // On Vercel/production, use CDN ESM directly
+      const mod: any = await import(/* @vite-ignore */ 'https://cdn.zama.ai/relayer-sdk-js/0.2.0/relayer-sdk-js.esm.js');
+      return mod;
+    } else {
+      const mod: any = await import('@zama-fhe/relayer-sdk/bundle');
+      return mod;
+    }
   } catch (e) {
     console.error('Failed to load relayer SDK module. Ensure CDN script is included in index.html.', e);
     throw e;
