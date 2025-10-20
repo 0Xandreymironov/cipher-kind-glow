@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Shield, Heart, Users, Globe, Zap, Star, TreePine, Droplets, BookOpen, Building2, Wallet } from "lucide-react";
 import DonationDialog from "./DonationDialog";
 import { useAccount } from 'wagmi';
-import { useGetCampaign, useGetCampaignEncryptedData } from '@/hooks/useContract';
+import { useGetCampaign, useGetCampaignEncryptedData, useGetCampaignStats } from '@/hooks/useContract';
 import { useZamaInstance } from '@/hooks/useZamaInstance';
 import { useState, useEffect } from 'react';
 
@@ -34,6 +34,7 @@ const RealCampaignBox = ({
   const { campaign, isLoading: campaignLoading } = useGetCampaign(campaignId);
   const { encryptedData } = useGetCampaignEncryptedData(campaignId);
   const { instance } = useZamaInstance();
+  const { donorCount, donationCount, isLoading: statsLoading } = useGetCampaignStats(campaignId);
   const [decryptedAmount, setDecryptedAmount] = useState<string>('');
   const [progress, setProgress] = useState<number>(0);
 
@@ -51,13 +52,16 @@ const RealCampaignBox = ({
 
       try {
         // Create handle contract pairs for decryption
-        const handleContractPairs = [
-          { handle: encryptedData.encryptedTotalRaised, contractAddress: import.meta.env.VITE_CONTRACT_ADDRESS || '0x0000000000000000000000000000000000000000' }
-        ];
+        const totalHandle = (encryptedData as any)?.[1] ?? (encryptedData as any)?.encryptedTotalRaised;
+        if (!totalHandle) return;
+        const handleContractPairs = [{
+          handle: totalHandle,
+          contractAddress: import.meta.env.VITE_CONTRACT_ADDRESS || '0x0000000000000000000000000000000000000000'
+        }];
 
         // Decrypt the total raised amount
         const result = await instance.userDecrypt(handleContractPairs);
-        const totalRaised = result[encryptedData.encryptedTotalRaised];
+        const totalRaised = result[totalHandle as any];
         
         if (totalRaised) {
           setDecryptedAmount((Number(totalRaised) / 100).toFixed(2)); // Convert from cents to dollars
@@ -132,7 +136,7 @@ const RealCampaignBox = ({
         <div className="space-y-3">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground font-medium">
-              {campaign.donorCount} private donors
+              {campaign.donorCount} private donors · {donationCount ?? 0} donations
             </span>
             <span className="text-glow-primary font-bold text-lg">
               {progress.toFixed(1)}%
