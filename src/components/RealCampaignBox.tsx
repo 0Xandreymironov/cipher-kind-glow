@@ -37,6 +37,14 @@ const RealCampaignBox = ({
   const [decryptedAmount, setDecryptedAmount] = useState<string>('');
   const [progress, setProgress] = useState<number>(0);
 
+  console.log('🔍 RealCampaignBox render:', { 
+    campaignId, 
+    campaign, 
+    campaignLoading, 
+    encryptedData,
+    instance: !!instance 
+  });
+
   useEffect(() => {
     const decryptData = async () => {
       if (!instance || !encryptedData || !campaignId) return;

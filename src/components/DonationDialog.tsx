@@ -24,7 +24,14 @@ const DonationDialog = ({ title, campaignId, trigger }: DonationDialogProps) => 
   const { toast } = useToast();
   const { isConnected, address } = useAccount();
   const { makeDonation, isLoading: isDonating } = useMakeDonation();
-  const { instance, isInitialized, initializeZama, isLoading: zamaLoading, error: zamaError } = useZamaInstance();
+  const { instance, isInitialized, isLoading: zamaLoading, error: zamaError, initializeZama } = useZamaInstance();
+  
+  console.log('🔍 DonationDialog Zama state:', { 
+    instance: !!instance, 
+    isInitialized, 
+    zamaLoading, 
+    zamaError 
+  });
 
   const handleAmountChange = (value: string) => {
     setAmount(value);
@@ -63,12 +70,6 @@ const DonationDialog = ({ title, campaignId, trigger }: DonationDialogProps) => 
     
     setIsEncrypting(true);
     try {
-      // Initialize FHE if not already done
-      if (!isInitialized) {
-        console.log('🔄 Initializing Zama instance...');
-        await initializeZama();
-      }
-
       console.log('🔄 Step 1: Creating encrypted input...');
       const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS || '0x0000000000000000000000000000000000000000';
       console.log('📊 Contract address:', contractAddress);
@@ -113,11 +114,18 @@ const DonationDialog = ({ title, campaignId, trigger }: DonationDialogProps) => 
   };
 
   const handleDonate = async () => {
-    if (!campaignId || !makeDonation) return;
+    console.log('🎯 handleDonate called:', { campaignId, makeDonation: !!makeDonation, amount });
+    
+    if (!campaignId || !makeDonation) {
+      console.error('❌ Missing required parameters:', { campaignId, makeDonation: !!makeDonation });
+      return;
+    }
     
     try {
+      console.log('🚀 Calling makeDonation with amount:', parseFloat(amount) * 100);
       // Call smart contract with FHE-encrypted amount
-      await makeDonation(campaignId, parseFloat(amount) * 100); // Convert to cents
+      const result = await makeDonation(campaignId, parseFloat(amount) * 100); // Convert to cents
+      console.log('✅ makeDonation result:', result);
       
       toast({
         title: "Donation Submitted Successfully",
@@ -128,7 +136,7 @@ const DonationDialog = ({ title, campaignId, trigger }: DonationDialogProps) => 
       setAmount("");
       setEncryptedAmount("");
     } catch (error) {
-      console.error('Donation error:', error);
+      console.error('❌ Donation error:', error);
       toast({
         title: "Donation Failed",
         description: "There was an error submitting your donation. Please try again.",

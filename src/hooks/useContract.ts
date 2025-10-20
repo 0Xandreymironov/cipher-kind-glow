@@ -36,21 +36,29 @@ export const useMakeDonation = () => {
   const { address } = useAccount();
 
   const makeDonation = async (campaignId: string, amount: number) => {
+    console.log('💰 Starting donation process:', { campaignId, amount, instance: !!instance, address });
+    
     if (!instance || !address) {
       throw new Error('FHE instance or wallet not available');
     }
 
+    console.log('🔐 Creating encrypted input for donation...');
     // Create encrypted input for donation amount
     const input = instance.createEncryptedInput(CONTRACT_ADDRESS, address);
     input.add32(BigInt(amount));
     const encryptedInput = await input.encrypt();
+    console.log('✅ Encrypted input created:', { handles: encryptedInput.handles.length });
 
-    return writeContract({
+    console.log('📝 Calling smart contract makeDonation...');
+    const result = await writeContract({
       address: CONTRACT_ADDRESS as `0x${string}`,
       abi: CipherKindGlowABI,
       functionName: 'makeDonation',
       args: [campaignId as `0x${string}`, encryptedInput.handles[0], encryptedInput.inputProof],
     });
+    
+    console.log('🎉 Donation transaction submitted:', result);
+    return result;
   };
 
   return { makeDonation, isLoading: isPending, error };
@@ -72,13 +80,29 @@ export const useGetCampaigns = () => {
 };
 
 export const useGetCampaign = (campaignId: string) => {
-  const { data: campaign, isLoading, error } = useReadContract({
+  console.log('🔍 useGetCampaign called:', { campaignId, contractAddress: CONTRACT_ADDRESS });
+  
+  const { data: rawCampaign, isLoading, error } = useReadContract({
     address: CONTRACT_ADDRESS as `0x${string}`,
     abi: CipherKindGlowABI,
     functionName: 'getCampaign',
     args: [campaignId as `0x${string}`],
   });
 
+  // Parse the raw campaign data
+  const campaign = rawCampaign ? {
+    id: rawCampaign[0],
+    creator: rawCampaign[1],
+    title: rawCampaign[2],
+    description: rawCampaign[3],
+    isActive: rawCampaign[4],
+    createdAt: rawCampaign[5],
+    completedAt: rawCampaign[6],
+    donorCount: rawCampaign[7]
+  } : undefined;
+
+  console.log('📊 Campaign data:', { rawCampaign, campaign, isLoading, error });
+  
   return { campaign, isLoading, error };
 };
 
