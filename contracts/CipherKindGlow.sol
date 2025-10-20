@@ -43,7 +43,7 @@ contract CipherKindGlow is SepoliaConfig {
         uint256 completedAt;
         mapping(address => bool) donors;
         uint256 donorCount;
-        uint256 donationCount; // public stats without touching encrypted amounts
+        uint256 donationCount; // public stats only (no plaintext amount)
     }
 
     struct Donation {
@@ -161,14 +161,14 @@ contract CipherKindGlow is SepoliaConfig {
         FHE.allowThis(donation.encryptedAmount);
         FHE.allow(donation.encryptedAmount, msg.sender);
 
-        // Public stats (do not update encrypted totals to avoid extra constraints)
+        // Update public stats without touching encrypted totals
         Campaign storage c = campaigns[_campaignId];
         if (!c.donors[msg.sender]) {
             c.donors[msg.sender] = true;
             c.donorCount++;
         }
         c.donationCount++;
-        
+
         totalDonations++;
 
         emit DonationMade(
@@ -179,10 +179,10 @@ contract CipherKindGlow is SepoliaConfig {
     }
 
     /**
-     * @dev Get public stats for a campaign (no FHE involved)
+     * @dev Get public stats for a campaign
      * @param _campaignId Campaign ID
-     * @return donorCount Number of unique donors
-     * @return donationCount Number of donations
+     * @return donorCount number of unique donors
+     * @return donationCount number of donations
      */
     function getCampaignStats(bytes32 _campaignId) external view returns (uint256 donorCount, uint256 donationCount) {
         Campaign storage c = campaigns[_campaignId];
