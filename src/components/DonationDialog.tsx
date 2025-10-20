@@ -227,7 +227,20 @@ const DonationDialog = ({ title, campaignId, trigger }: DonationDialogProps) => 
                     </div>
                   </div>
                   {zamaError && (
-                    <div className="text-xs text-red-500 mt-1">{zamaError}</div>
+                    <div className="space-y-2">
+                      <div className="text-xs text-red-500">{zamaError}</div>
+                      <Button
+                        onClick={() => {
+                          console.log('🔄 Manual retry triggered');
+                          initializeZama();
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs"
+                      >
+                        Retry Initialization
+                      </Button>
+                    </div>
                   )}
                 </div>
 

@@ -19,9 +19,7 @@ export function useZamaInstance() {
 
       // Check if ethereum provider is available
       if (!(window as any).ethereum) {
-        console.log('⚠️ Ethereum provider not found, waiting for wallet connection...');
-        setError('Ethereum provider not found. Please connect your wallet first.');
-        return;
+        throw new Error('Ethereum provider not found');
       }
 
       console.log('🔄 Step 1: Initializing SDK...');
@@ -44,19 +42,19 @@ export function useZamaInstance() {
 
     } catch (err) {
       console.error('❌ Failed to initialize Zama instance:', err);
-      setError(`Failed to initialize encryption service: ${err.message}`);
+      setError('Failed to initialize encryption service. Please ensure you have a wallet connected.');
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    console.log('🔄 Wallet connection status changed:', { isConnected, isInitialized });
+    console.log('🔄 Wallet connection status changed:', { isConnected, isInitialized, isLoading });
     if (isConnected && !isInitialized && !isLoading) {
       console.log('🔄 Wallet connected, initializing Zama...');
       initializeZama();
     }
-  }, [isConnected, isInitialized, isLoading]);
+  }, [isConnected]);
 
   return {
     instance,
