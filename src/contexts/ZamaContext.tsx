@@ -1,36 +1,26 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-// On Vercel, ESM import of '@zama-fhe/relayer-sdk/bundle' may fail.
-// Prefer the UMD global injected via index.html: window.RelayerSDK
+// Follow fhed-shield-secure: only use UMD global injected via index.html
+// Wait for window.RelayerSDK to be ready (in case script loads slightly after React mounts)
 const loadRelayer = async () => {
-  const g: any = (globalThis as any);
-  if (g.RelayerSDK) {
-    return g.RelayerSDK;
-  }
-  // Fallback to dynamic import for dev/local environments
-  try {
-    if (!(import.meta && (import.meta as any).env && (import.meta as any).env.DEV)) {
-      // In production prefer UMD global (already injected in index.html)
-      const g: any = (globalThis as any);
-      if (g.RelayerSDK) return g.RelayerSDK;
-      // Fallback to ESM if UMD not present
-      const mod: any = await import(/* @vite-ignore */ 'https://cdn.zama.ai/relayer-sdk-js/0.2.0/relayer-sdk-js.esm.js');
-      return mod;
-    } else {
-      const mod: any = await import('@zama-fhe/relayer-sdk/bundle');
-      return mod;
-    }
-  } catch (e) {
-    console.error('Failed to load relayer SDK module. Ensure CDN script is included in index.html.', e);
-    throw e;
-  }
-};
-
-// Normalize different export shapes (UMD / ESM / bundle default)
-const pickSDK = (mod: any) => {
-  const m = mod?.default ?? mod;
-  if (m?.RelayerSDK?.initSDK) return m.RelayerSDK;
-  return m;
+  const get = () => (globalThis as any)?.RelayerSDK;
+  let sdk = get();
+  if (sdk) return sdk;
+  // wait up to 2s
+  await new Promise<void>((resolve, reject) => {
+    const started = Date.now();
+    const t = setInterval(() => {
+      sdk = get();
+      if (sdk) {
+        clearInterval(t);
+        resolve();
+      } else if (Date.now() - started > 2000) {
+        clearInterval(t);
+        reject(new Error('RelayerSDK UMD not found'));
+      }
+    }, 50);
+  });
+  return get();
 };
 
 interface ZamaContextType {
