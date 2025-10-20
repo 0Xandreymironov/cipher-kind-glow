@@ -2,10 +2,10 @@ import { useReadContract, useWriteContract, useAccount } from 'wagmi';
 import { CipherKindGlowABI } from '../lib/contract';
 import { useZamaInstance } from './useZamaInstance';
 
-const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || '0x0000000000000000000000000000000000000000'; // Replace with deployed contract address
+const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || '0x20197a609e36bd5a3B762F5Fdd973b9185B1144c'; // Replace with deployed contract address
 
 export const useCreateCampaign = () => {
-  const { writeContract, isPending, error } = useWriteContract();
+  const { writeContractAsync, isPending, error } = useWriteContract();
   const { instance } = useZamaInstance();
   const { address } = useAccount();
 
@@ -14,24 +14,29 @@ export const useCreateCampaign = () => {
       throw new Error('FHE instance or wallet not available');
     }
 
-    // Create encrypted input for target amount
-    const input = instance.createEncryptedInput(CONTRACT_ADDRESS, address);
-    input.add32(BigInt(targetAmount));
-    const encryptedInput = await input.encrypt();
+    try {
+      // Create encrypted input for target amount
+      const input = instance.createEncryptedInput(CONTRACT_ADDRESS, address);
+      input.add32(BigInt(targetAmount));
+      const encryptedInput = await input.encrypt();
 
-    return writeContract({
-      address: CONTRACT_ADDRESS as `0x${string}`,
-      abi: CipherKindGlowABI,
-      functionName: 'createCampaign',
-      args: [title, description, encryptedInput.handles[0], encryptedInput.inputProof],
-    });
+      return await writeContractAsync({
+        address: CONTRACT_ADDRESS as `0x${string}`,
+        abi: CipherKindGlowABI,
+        functionName: 'createCampaign',
+        args: [title, description, encryptedInput.handles[0], encryptedInput.inputProof],
+      } as any);
+    } catch (err) {
+      console.error('Error creating campaign:', err);
+      throw err;
+    }
   };
 
   return { createCampaign, isLoading: isPending, error };
 };
 
 export const useMakeDonation = () => {
-  const { writeContract, isPending, error } = useWriteContract();
+  const { writeContractAsync, isPending, error } = useWriteContract();
   const { instance } = useZamaInstance();
   const { address } = useAccount();
 
@@ -42,33 +47,36 @@ export const useMakeDonation = () => {
       throw new Error('FHE instance or wallet not available');
     }
 
-    console.log('🔐 Creating encrypted input for donation...');
-    // Create encrypted input for donation amount
-    const input = instance.createEncryptedInput(CONTRACT_ADDRESS, address);
-    input.add32(BigInt(amount));
-    const encryptedInput = await input.encrypt();
-    console.log('✅ Encrypted input created:', { handles: encryptedInput.handles.length });
-
-    console.log('📝 Calling smart contract makeDonation...');
-    console.log('📊 Contract details:', {
-      address: CONTRACT_ADDRESS,
-      functionName: 'makeDonation',
-      args: [campaignId, encryptedInput.handles[0], encryptedInput.inputProof]
-    });
-    
     try {
-      // writeContract returns a hash string, not a promise
-      const hash = writeContract({
+      console.log('🔐 Creating encrypted input for donation...');
+      // Create encrypted input for donation amount
+      const input = instance.createEncryptedInput(CONTRACT_ADDRESS, address);
+      input.add32(BigInt(amount));
+      const encryptedInput = await input.encrypt();
+      console.log('✅ Encrypted input created:', { handles: encryptedInput.handles.length });
+
+      console.log('📝 Calling smart contract makeDonation...');
+      console.log('📊 Contract details:', {
+        address: CONTRACT_ADDRESS,
+        functionName: 'makeDonation',
+        args: [campaignId, encryptedInput.handles[0], encryptedInput.inputProof]
+      });
+      
+      // Use writeContractAsync like aidwell-connect
+      const result = await writeContractAsync({
         address: CONTRACT_ADDRESS as `0x${string}`,
         abi: CipherKindGlowABI,
         functionName: 'makeDonation',
         args: [campaignId as `0x${string}`, encryptedInput.handles[0], encryptedInput.inputProof],
-      });
+      } as any);
       
-      console.log('🎉 Donation transaction hash:', hash);
-      return hash;
+      console.log('🎉 Donation transaction submitted:', result);
+      return result;
     } catch (writeError) {
-      console.error('❌ writeContract error:', writeError);
+      console.error('❌ writeContractAsync error:', writeError);
+      console.error('Error type:', typeof writeError);
+      console.error('Error message:', writeError?.message);
+      console.error('Error code:', writeError?.code);
       throw writeError;
     }
   };
