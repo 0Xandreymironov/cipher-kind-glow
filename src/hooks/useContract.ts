@@ -50,15 +50,27 @@ export const useMakeDonation = () => {
     console.log('✅ Encrypted input created:', { handles: encryptedInput.handles.length });
 
     console.log('📝 Calling smart contract makeDonation...');
-    const result = await writeContract({
-      address: CONTRACT_ADDRESS as `0x${string}`,
-      abi: CipherKindGlowABI,
+    console.log('📊 Contract details:', {
+      address: CONTRACT_ADDRESS,
       functionName: 'makeDonation',
-      args: [campaignId as `0x${string}`, encryptedInput.handles[0], encryptedInput.inputProof],
+      args: [campaignId, encryptedInput.handles[0], encryptedInput.inputProof]
     });
     
-    console.log('🎉 Donation transaction submitted:', result);
-    return result;
+    try {
+      // writeContract returns a hash string, not a promise
+      const hash = writeContract({
+        address: CONTRACT_ADDRESS as `0x${string}`,
+        abi: CipherKindGlowABI,
+        functionName: 'makeDonation',
+        args: [campaignId as `0x${string}`, encryptedInput.handles[0], encryptedInput.inputProof],
+      });
+      
+      console.log('🎉 Donation transaction hash:', hash);
+      return hash;
+    } catch (writeError) {
+      console.error('❌ writeContract error:', writeError);
+      throw writeError;
+    }
   };
 
   return { makeDonation, isLoading: isPending, error };
