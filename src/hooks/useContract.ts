@@ -174,6 +174,24 @@ export const useGetCampaign = (campaignId: string) => {
   return { campaign, isLoading, error };
 };
 
+export const useGetCampaignStats = (campaignId: string) => {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: CONTRACT_ADDRESS as `0x${string}`,
+    abi: CipherKindGlowABI,
+    functionName: 'getCampaignStats',
+    args: [campaignId as `0x${string}`],
+  });
+
+  let donorCount: number | undefined;
+  let donationCount: number | undefined;
+  if (data && Array.isArray(data) && data.length === 2) {
+    donorCount = Number(data[0]);
+    donationCount = Number(data[1]);
+  }
+
+  return { donorCount, donationCount, isLoading, error, refetch };
+};
+
 export const useGetPlatformStats = () => {
   const { data: stats, isLoading, error } = useReadContract({
     address: CONTRACT_ADDRESS as `0x${string}`,
