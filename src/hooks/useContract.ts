@@ -100,6 +100,16 @@ export const useMakeDonation = () => {
         args: [campaignIdBytes32, amountHandle, proof]
       });
       
+      console.log('🔍 Parameter details:', {
+        campaignIdBytes32: campaignIdBytes32,
+        campaignIdBytes32Type: typeof campaignIdBytes32,
+        amountHandle: amountHandle,
+        amountHandleType: typeof amountHandle,
+        proof: proof,
+        proofType: typeof proof,
+        proofLength: proof.length
+      });
+      
       // Use writeContractAsync like aidwell-connect
       const result = await writeContractAsync({
         address: CONTRACT_ADDRESS as `0x${string}`,
