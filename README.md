@@ -4,6 +4,34 @@
 
 A cutting-edge charitable giving platform that leverages Fully Homomorphic Encryption (FHE) technology to ensure complete privacy and security for all donations while maintaining transparency in impact tracking.
 
+## 🎥 Demo Video
+
+- Inline (repository): [`cipher-kind-glow.mp4`](./cipher-kind-glow.mp4)
+- Recommended: upload this asset to Releases or a CDN and paste the link here for faster streaming.
+
+## 🔗 Deployed Contract (Sepolia)
+
+- Contract: `0x5FE0dcf60cFf2adE7552A0E8C3f2f759A980817c`
+- Initialized Campaign IDs:
+  - `0xe36c37699c17bb7407d6b3ea58ffb54319cfe8969375f3d3ef2ff1e22d7bae33`
+  - `0xa27a0c04b63c6f6537a49752fc414a4abdb2c57888c73ef13a41e9473f8de2f3`
+  - `0x216de87f94bac87c3a227611c0bbc138d107d4d4ed3de792a507b56e65b85d0f`
+
+## 🔐 Encryption Flow (End-to-End)
+
+1. Wallet connects (RainbowKit/Wagmi) and Zama Relayer SDK initializes (SepoliaConfig).
+2. User inputs donation amount (in yuan). Frontend creates encrypted input:
+   - `const input = instance.createEncryptedInput(CONTRACT_ADDRESS, userAddress)`
+   - `input.add32(BigInt(amount))` → `const enc = await input.encrypt()`
+3. Frontend calls contract with FHE payload:
+   - `makeDonation(campaignId, enc.handles[0], enc.inputProof)`
+4. Contract converts to internal FHE type and stores the encrypted donation:
+   - `FHE.fromExternal(_encryptedAmount, _inputProof)`
+5. Public stats (counts only) are updated on-chain to avoid exposing amounts:
+   - `donorCount` (unique donors), `donationCount` (total donations)
+6. Frontend reads campaign data; donation counts are displayed immediately.
+7. (Optional) For totals, use `FHE.reencrypt` + `instance.userDecrypt` if/when you decide to display decrypted aggregates under proper ACL.
+
 ## ✨ Key Features
 
 - **🔐 FHE-Encrypted Donations**: All donation amounts and donor information are encrypted using state-of-the-art Fully Homomorphic Encryption
