@@ -1,5 +1,21 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { createInstance, initSDK, SepoliaConfig } from '@zama-fhe/relayer-sdk/bundle';
+
+// On Vercel, ESM import of '@zama-fhe/relayer-sdk/bundle' may fail.
+// Prefer the UMD global injected via index.html: window.RelayerSDK
+const loadRelayer = async () => {
+  const g: any = (globalThis as any);
+  if (g.RelayerSDK) {
+    return g.RelayerSDK;
+  }
+  // Fallback to dynamic import for dev/local environments
+  try {
+    const mod: any = await import('@zama-fhe/relayer-sdk/bundle');
+    return mod;
+  } catch (e) {
+    console.error('Failed to load relayer SDK module. Ensure CDN script is included in index.html.', e);
+    throw e;
+  }
+};
 
 interface ZamaContextType {
   instance: any;
@@ -43,6 +59,7 @@ export const ZamaProvider = ({ children }: ZamaProviderProps) => {
       }
 
       console.log('🔄 Step 1: Initializing SDK...');
+      const { initSDK, createInstance, SepoliaConfig } = await loadRelayer();
       await initSDK();
       console.log('✅ SDK initialized successfully');
 
