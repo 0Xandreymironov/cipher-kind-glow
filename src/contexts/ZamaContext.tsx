@@ -9,8 +9,11 @@ const loadRelayer = async () => {
   }
   // Fallback to dynamic import for dev/local environments
   try {
-    if (import.meta && (import.meta as any).env && (import.meta as any).env.PROD) {
-      // On Vercel/production, use CDN ESM directly
+    if (!(import.meta && (import.meta as any).env && (import.meta as any).env.DEV)) {
+      // In production prefer UMD global (already injected in index.html)
+      const g: any = (globalThis as any);
+      if (g.RelayerSDK) return g.RelayerSDK;
+      // Fallback to ESM if UMD not present
       const mod: any = await import(/* @vite-ignore */ 'https://cdn.zama.ai/relayer-sdk-js/0.2.0/relayer-sdk-js.esm.js');
       return mod;
     } else {
