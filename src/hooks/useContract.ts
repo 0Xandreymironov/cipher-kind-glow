@@ -111,6 +111,7 @@ export const useMakeDonation = () => {
       });
       
       // Use writeContractAsync like aidwell-connect
+      console.log('🔄 About to call writeContractAsync...');
       const result = await writeContractAsync({
         address: CONTRACT_ADDRESS as `0x${string}`,
         abi: CipherKindGlowABI,
