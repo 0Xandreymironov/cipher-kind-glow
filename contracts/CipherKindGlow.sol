@@ -141,14 +141,8 @@ contract CipherKindGlow is SepoliaConfig {
         externalEuint32 _encryptedAmount,
         bytes calldata _inputProof
     ) external onlyActiveCampaign(_campaignId) {
-        Campaign storage campaign = campaigns[_campaignId];
-        
         // Convert external ciphertext to internal encrypted type
         euint32 encryptedDonationAmount = FHE.fromExternal(_encryptedAmount, _inputProof);
-        
-        // Set ACL permissions immediately after FHE.fromExternal 
-        FHE.allowThis(encryptedDonationAmount);
-        FHE.allow(encryptedDonationAmount, msg.sender);
         
         // Create donation record
         Donation memory donation = Donation({
@@ -162,18 +156,9 @@ contract CipherKindGlow is SepoliaConfig {
         userDonations[msg.sender].push(donation);
         campaignDonations[_campaignId].push(donation);
         
-        // Update campaign state
-        if (!campaign.donors[msg.sender]) {
-            campaign.donors[msg.sender] = true;
-            campaign.donorCount++;
-        }
-
-        // Update encrypted total using FHE addition
-        campaign.encryptedTotalRaised = FHE.add(campaign.encryptedTotalRaised, encryptedDonationAmount);
-        
-        // Set ACL permissions for the total raised amount
-        FHE.allowThis(campaign.encryptedTotalRaised);
-        FHE.allow(campaign.encryptedTotalRaised, msg.sender);
+        // Set ACL permissions (like aidwell-connect)
+        FHE.allowThis(donation.encryptedAmount);
+        FHE.allow(donation.encryptedAmount, msg.sender);
 
         totalDonations++;
 
