@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { createInstance, initSDK, SepoliaConfig } from '@zama-fhe/relayer-sdk/bundle';
+import { useAccount } from 'wagmi';
 
 export function useZamaInstance() {
   const [instance, setInstance] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const { isConnected } = useAccount();
 
   const initializeZama = async () => {
     if (isLoading || isInitialized) return;
@@ -17,7 +19,9 @@ export function useZamaInstance() {
 
       // Check if ethereum provider is available
       if (!(window as any).ethereum) {
-        throw new Error('Ethereum provider not found');
+        console.log('⚠️ Ethereum provider not found, waiting for wallet connection...');
+        setError('Ethereum provider not found. Please connect your wallet first.');
+        return;
       }
 
       console.log('🔄 Step 1: Initializing SDK...');
@@ -40,15 +44,19 @@ export function useZamaInstance() {
 
     } catch (err) {
       console.error('❌ Failed to initialize Zama instance:', err);
-      setError('Failed to initialize encryption service. Please ensure you have a wallet connected.');
+      setError(`Failed to initialize encryption service: ${err.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    initializeZama();
-  }, []);
+    console.log('🔄 Wallet connection status changed:', { isConnected, isInitialized });
+    if (isConnected && !isInitialized && !isLoading) {
+      console.log('🔄 Wallet connected, initializing Zama...');
+      initializeZama();
+    }
+  }, [isConnected, isInitialized, isLoading]);
 
   return {
     instance,

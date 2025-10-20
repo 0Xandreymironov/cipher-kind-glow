@@ -24,7 +24,7 @@ const DonationDialog = ({ title, campaignId, trigger }: DonationDialogProps) => 
   const { toast } = useToast();
   const { isConnected, address } = useAccount();
   const { makeDonation, isLoading: isDonating } = useMakeDonation();
-  const { instance, isInitialized, initializeZama } = useZamaInstance();
+  const { instance, isInitialized, initializeZama, isLoading: zamaLoading, error: zamaError } = useZamaInstance();
 
   const handleAmountChange = (value: string) => {
     setAmount(value);
@@ -34,8 +34,30 @@ const DonationDialog = ({ title, campaignId, trigger }: DonationDialogProps) => 
     console.log('🔐 Starting encryption process...');
     console.log('📊 Input parameters:', { amount, instance: !!instance, address, isInitialized });
     
-    if (!amount || !instance || !address) {
-      console.log('❌ Missing required parameters:', { amount: !!amount, instance: !!instance, address: !!address });
+    if (!amount) {
+      toast({
+        title: "Amount Required",
+        description: "Please enter a donation amount.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!address) {
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!instance) {
+      toast({
+        title: "Encryption Service Not Ready",
+        description: "Please wait for the encryption service to initialize, or try reconnecting your wallet.",
+        variant: "destructive",
+      });
       return;
     }
     
@@ -181,6 +203,34 @@ const DonationDialog = ({ title, campaignId, trigger }: DonationDialogProps) => 
                   </div>
                 </div>
 
+                {/* Zama Status Indicator */}
+                <div className="p-3 rounded-lg bg-privacy-medium/20 border border-glow-primary/30">
+                  <div className="flex items-center justify-between text-sm mb-2">
+                    <span className="text-muted-foreground">Encryption Service:</span>
+                    <div className="flex items-center space-x-2">
+                      {zamaLoading ? (
+                        <>
+                          <div className="animate-spin w-4 h-4 border-2 border-glow-primary border-t-transparent rounded-full" />
+                          <span className="text-glow-primary">Initializing...</span>
+                        </>
+                      ) : instance ? (
+                        <>
+                          <Check className="w-4 h-4 text-green-500" />
+                          <span className="text-green-500">Ready</span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-4 h-4 bg-red-500 rounded-full" />
+                          <span className="text-red-500">Not Ready</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  {zamaError && (
+                    <div className="text-xs text-red-500 mt-1">{zamaError}</div>
+                  )}
+                </div>
+
                 {amount && (
                   <div className="p-3 rounded-lg bg-privacy-medium/20 border border-glow-primary/30">
                     <div className="flex items-center justify-between text-sm">
@@ -193,7 +243,7 @@ const DonationDialog = ({ title, campaignId, trigger }: DonationDialogProps) => 
 
                 <Button 
                   onClick={handleEncrypt}
-                  disabled={!amount || isEncrypting}
+                  disabled={!amount || isEncrypting || !instance || !address}
                   className="w-full"
                   variant="encrypted"
                 >
@@ -201,6 +251,16 @@ const DonationDialog = ({ title, campaignId, trigger }: DonationDialogProps) => 
                     <>
                       <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full mr-2" />
                       Encrypting with FHE...
+                    </>
+                  ) : !instance ? (
+                    <>
+                      <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full mr-2" />
+                      Waiting for Encryption Service...
+                    </>
+                  ) : !address ? (
+                    <>
+                      <Wallet className="w-4 h-4 mr-2" />
+                      Connect Wallet First
                     </>
                   ) : (
                     <>
