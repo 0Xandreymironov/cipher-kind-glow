@@ -26,6 +26,13 @@ const loadRelayer = async () => {
   }
 };
 
+// Normalize different export shapes (UMD / ESM / bundle default)
+const pickSDK = (mod: any) => {
+  const m = mod?.default ?? mod;
+  if (m?.RelayerSDK?.initSDK) return m.RelayerSDK;
+  return m;
+};
+
 interface ZamaContextType {
   instance: any;
   isLoading: boolean;
@@ -68,7 +75,8 @@ export const ZamaProvider = ({ children }: ZamaProviderProps) => {
       }
 
       console.log('🔄 Step 1: Initializing SDK...');
-      const { initSDK, createInstance, SepoliaConfig } = await loadRelayer();
+      const lib = await loadRelayer();
+      const { initSDK, createInstance, SepoliaConfig } = pickSDK(lib);
       await initSDK();
       console.log('✅ SDK initialized successfully');
 
