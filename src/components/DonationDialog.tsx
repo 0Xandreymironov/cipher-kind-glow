@@ -8,6 +8,7 @@ import { Shield, Wallet, Lock, Check, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAccount } from 'wagmi';
 import { useMakeDonation } from '@/hooks/useContract';
+import { useZamaInstance } from '@/hooks/useZamaInstance';
 
 interface DonationDialogProps {
   title: string;
@@ -21,26 +22,62 @@ const DonationDialog = ({ title, campaignId, trigger }: DonationDialogProps) => 
   const [isEncrypting, setIsEncrypting] = useState(false);
   const [encryptedAmount, setEncryptedAmount] = useState("");
   const { toast } = useToast();
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
   const { makeDonation, isLoading: isDonating } = useMakeDonation();
+  const { instance, isInitialized, initializeZama } = useZamaInstance();
 
   const handleAmountChange = (value: string) => {
     setAmount(value);
-    if (value) {
-      // Simulate encryption
-      const encrypted = `0x${Math.random().toString(16).substring(2, 16)}...`;
-      setEncryptedAmount(encrypted);
-    }
   };
 
-  const handleEncrypt = () => {
-    if (!amount) return;
+  const handleEncrypt = async () => {
+    console.log('🔐 Starting encryption process...');
+    console.log('📊 Input parameters:', { amount, instance: !!instance, address, isInitialized });
+    
+    if (!amount || !instance || !address) {
+      console.log('❌ Missing required parameters:', { amount: !!amount, instance: !!instance, address: !!address });
+      return;
+    }
     
     setIsEncrypting(true);
-    setTimeout(() => {
-      setIsEncrypting(false);
+    try {
+      // Initialize FHE if not already done
+      if (!isInitialized) {
+        console.log('🔄 Initializing Zama instance...');
+        await initializeZama();
+      }
+
+      console.log('🔄 Step 1: Creating encrypted input...');
+      const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS || '0x0000000000000000000000000000000000000000';
+      console.log('📊 Contract address:', contractAddress);
+      
+      const input = instance.createEncryptedInput(contractAddress, address);
+      console.log('✅ Encrypted input created');
+      
+      console.log('🔄 Step 2: Adding amount to encrypted input...');
+      const amountInCents = BigInt(parseFloat(amount) * 100);
+      console.log('📊 Amount in cents:', amountInCents.toString());
+      
+      input.add32(amountInCents);
+      console.log('✅ Amount added to encrypted input');
+      
+      console.log('🔄 Step 3: Encrypting data...');
+      const encryptedInput = await input.encrypt();
+      console.log('✅ Encryption completed, handles count:', encryptedInput.handles.length);
+
+      setEncryptedAmount(encryptedInput.handles[0]);
       setStep(2);
-    }, 2000);
+      console.log('🎉 Encryption process completed successfully!');
+    } catch (error) {
+      console.error('❌ Encryption failed:', error);
+      toast({
+        title: "Encryption Failed",
+        description: "Failed to encrypt donation amount. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsEncrypting(false);
+    }
   };
 
   const handleConnectWallet = () => {
@@ -57,24 +94,12 @@ const DonationDialog = ({ title, campaignId, trigger }: DonationDialogProps) => 
     if (!campaignId || !makeDonation) return;
     
     try {
-      // Create FHE-encrypted data for blockchain storage
-      // This simulates FHE encryption - in production, use actual FHE library
-      const donationData = {
-        amount: parseFloat(amount),
-        timestamp: Date.now(),
-        donor: 'encrypted_donor_data',
-        campaign: campaignId
-      };
-      
-      // Convert to encrypted bytes for blockchain storage
-      const encryptedBytes = new TextEncoder().encode(JSON.stringify(donationData));
-      
-      // Call smart contract with encrypted data
-      await makeDonation(campaignId, encryptedBytes);
+      // Call smart contract with FHE-encrypted amount
+      await makeDonation(campaignId, parseFloat(amount) * 100); // Convert to cents
       
       toast({
         title: "Donation Submitted Successfully",
-        description: `Your encrypted donation has been securely stored on the blockchain. Transaction hash: ${encryptedAmount}`,
+        description: `Your encrypted donation of $${amount} has been securely stored on the blockchain.`,
       });
       
       setStep(1);

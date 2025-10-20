@@ -112,8 +112,13 @@ export const CipherKindGlowABI = [
         "type": "string"
       },
       {
-        "internalType": "bytes",
+        "internalType": "bytes32",
         "name": "_encryptedTargetAmount",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "bytes",
+        "name": "_inputProof",
         "type": "bytes"
       }
     ],
@@ -136,8 +141,13 @@ export const CipherKindGlowABI = [
         "type": "bytes32"
       },
       {
-        "internalType": "bytes",
+        "internalType": "bytes32",
         "name": "_encryptedAmount",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "bytes",
+        "name": "_inputProof",
         "type": "bytes"
       }
     ],
@@ -239,6 +249,30 @@ export const CipherKindGlowABI = [
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "_campaignId",
+        "type": "bytes32"
+      }
+    ],
+    "name": "getCampaignEncryptedData",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "encryptedTargetAmount",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "encryptedTotalRaised",
+        "type": "bytes32"
       }
     ],
     "stateMutability": "view",

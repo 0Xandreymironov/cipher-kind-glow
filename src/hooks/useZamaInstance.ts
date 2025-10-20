@@ -1,0 +1,60 @@
+import { useState, useEffect } from 'react';
+import { createInstance, initSDK, SepoliaConfig } from '@zama-fhe/relayer-sdk/bundle';
+
+export function useZamaInstance() {
+  const [instance, setInstance] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  const initializeZama = async () => {
+    if (isLoading || isInitialized) return;
+
+    try {
+      console.log('🚀 Starting Zama initialization...');
+      setIsLoading(true);
+      setError(null);
+
+      // Check if ethereum provider is available
+      if (!(window as any).ethereum) {
+        throw new Error('Ethereum provider not found');
+      }
+
+      console.log('🔄 Step 1: Initializing SDK...');
+      await initSDK();
+      console.log('✅ SDK initialized successfully');
+
+      console.log('🔄 Step 2: Creating Zama instance...');
+      const config = {
+        ...SepoliaConfig,
+        network: (window as any).ethereum
+      };
+
+      console.log('📊 Config:', config);
+      const zamaInstance = await createInstance(config);
+      console.log('✅ Zama instance created successfully');
+      
+      setInstance(zamaInstance);
+      setIsInitialized(true);
+      console.log('🎉 Zama initialization completed!');
+
+    } catch (err) {
+      console.error('❌ Failed to initialize Zama instance:', err);
+      setError('Failed to initialize encryption service. Please ensure you have a wallet connected.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    initializeZama();
+  }, []);
+
+  return {
+    instance,
+    isLoading,
+    error,
+    isInitialized,
+    initializeZama
+  };
+}

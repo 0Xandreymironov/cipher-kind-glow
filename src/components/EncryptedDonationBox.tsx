@@ -3,14 +3,15 @@ import { Card } from "@/components/ui/card";
 import { Shield, Heart, Users, Globe, Zap, Star, TreePine, Droplets, BookOpen, Building2 } from "lucide-react";
 import DonationDialog from "./DonationDialog";
 import { useAccount } from 'wagmi';
+import { useGetCampaignEncryptedData } from '@/hooks/useContract';
+import { useZamaInstance } from '@/hooks/useZamaInstance';
+import { useState, useEffect } from 'react';
 
 interface EncryptedDonationBoxProps {
   title: string;
   description: string;
-  encryptedAmount: string;
   donorCount: number;
   icon: "shield" | "heart" | "users" | "globe" | "zap" | "star" | "tree" | "droplets" | "book" | "building";
-  progress: number;
   campaignId?: string;
 }
 
@@ -30,14 +31,46 @@ const iconMap = {
 const EncryptedDonationBox = ({
   title,
   description,
-  encryptedAmount,
   donorCount,
   icon,
-  progress,
   campaignId,
 }: EncryptedDonationBoxProps) => {
   const Icon = iconMap[icon];
   const { isConnected } = useAccount();
+  const { instance } = useZamaInstance();
+  const { encryptedData } = useGetCampaignEncryptedData(campaignId || '');
+  const [decryptedAmount, setDecryptedAmount] = useState<string>('');
+  const [progress, setProgress] = useState<number>(0);
+
+  useEffect(() => {
+    const decryptData = async () => {
+      if (!instance || !encryptedData || !campaignId) return;
+
+      try {
+        // Create handle contract pairs for decryption
+        const handleContractPairs = [
+          { handle: encryptedData.encryptedTotalRaised, contractAddress: import.meta.env.VITE_CONTRACT_ADDRESS || '0x0000000000000000000000000000000000000000' }
+        ];
+
+        // Decrypt the total raised amount
+        const result = await instance.userDecrypt(handleContractPairs);
+        const totalRaised = result[encryptedData.encryptedTotalRaised];
+        
+        if (totalRaised) {
+          setDecryptedAmount((Number(totalRaised) / 100).toFixed(2)); // Convert from cents to dollars
+          
+          // Calculate progress (assuming target is 10000 cents = $100)
+          const targetAmount = 10000; // This should come from the contract
+          setProgress(Math.min((Number(totalRaised) / targetAmount) * 100, 100));
+        }
+      } catch (error) {
+        console.error('Decryption failed:', error);
+        setDecryptedAmount('***.**'); // Show encrypted placeholder
+      }
+    };
+
+    decryptData();
+  }, [instance, encryptedData, campaignId]);
 
   return (
     <Card className="p-6 bg-card border-glow-primary/20 hover:border-glow-primary/40 transition-all duration-300 animate-glow-pulse hover:shadow-glow">
@@ -61,7 +94,7 @@ const EncryptedDonationBox = ({
               <Shield className="w-4 h-4 text-glow-primary" />
             </div>
             <div className="text-xl font-mono text-glow-primary bg-gradient-to-r from-transparent via-glow-primary/10 to-transparent bg-[length:200%_100%] animate-encrypted-shimmer p-2 rounded">
-              {encryptedAmount}
+              ${decryptedAmount || '***.**'}
             </div>
           </div>
 

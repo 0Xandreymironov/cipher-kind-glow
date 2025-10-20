@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.24;
 
-import "@zama-fhe/oracle-solidity/contracts/FheOracle.sol";
+import {FHE, euint32, externalEuint32} from "@fhevm/solidity/lib/FHE.sol";
+import {SepoliaConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
 
 /**
  * @title CipherKindGlow
  * @dev FHE-powered donation platform with encrypted donation amounts
  * @author 0Xandreymironov
  */
-contract CipherKindGlow is FheOracle {
+contract CipherKindGlow is SepoliaConfig {
     // Events
     event DonationMade(
         address indexed donor,
         bytes32 indexed campaignId,
-        bytes encryptedAmount,
         uint256 timestamp
     );
     
@@ -22,13 +22,11 @@ contract CipherKindGlow is FheOracle {
         address indexed creator,
         string title,
         string description,
-        bytes encryptedTargetAmount,
         uint256 timestamp
     );
     
     event CampaignCompleted(
         bytes32 indexed campaignId,
-        bytes encryptedTotalRaised,
         uint256 timestamp
     );
 
@@ -38,8 +36,8 @@ contract CipherKindGlow is FheOracle {
         address creator;
         string title;
         string description;
-        bytes encryptedTargetAmount;
-        bytes encryptedTotalRaised;
+        euint32 encryptedTargetAmount;
+        euint32 encryptedTotalRaised;
         bool isActive;
         uint256 createdAt;
         uint256 completedAt;
@@ -50,7 +48,7 @@ contract CipherKindGlow is FheOracle {
     struct Donation {
         address donor;
         bytes32 campaignId;
-        bytes encryptedAmount;
+        euint32 encryptedAmount;
         uint256 timestamp;
     }
 
@@ -82,11 +80,13 @@ contract CipherKindGlow is FheOracle {
      * @param _title Campaign title
      * @param _description Campaign description
      * @param _encryptedTargetAmount Encrypted target amount using FHE
+     * @param _inputProof Proof for the encrypted target amount
      */
     function createCampaign(
         string memory _title,
         string memory _description,
-        bytes memory _encryptedTargetAmount
+        externalEuint32 _encryptedTargetAmount,
+        bytes calldata _inputProof
     ) external returns (bytes32) {
         bytes32 campaignId = keccak256(
             abi.encodePacked(
@@ -97,17 +97,24 @@ contract CipherKindGlow is FheOracle {
             )
         );
 
+        // Convert external ciphertext to internal encrypted type
+        euint32 encryptedTarget = FHE.fromExternal(_encryptedTargetAmount, _inputProof);
+
         Campaign storage campaign = campaigns[campaignId];
         campaign.id = campaignId;
         campaign.creator = msg.sender;
         campaign.title = _title;
         campaign.description = _description;
-        campaign.encryptedTargetAmount = _encryptedTargetAmount;
-        campaign.encryptedTotalRaised = new bytes(0);
+        campaign.encryptedTargetAmount = encryptedTarget;
+        campaign.encryptedTotalRaised = FHE.asEuint32(0);
         campaign.isActive = true;
         campaign.createdAt = block.timestamp;
         campaign.completedAt = 0;
         campaign.donorCount = 0;
+
+        // Set ACL permissions for the encrypted target amount
+        FHE.allowThis(campaign.encryptedTargetAmount);
+        FHE.allow(campaign.encryptedTargetAmount, msg.sender);
 
         campaignIds.push(campaignId);
         totalCampaigns++;
@@ -117,7 +124,6 @@ contract CipherKindGlow is FheOracle {
             msg.sender,
             _title,
             _description,
-            _encryptedTargetAmount,
             block.timestamp
         );
 
@@ -128,18 +134,23 @@ contract CipherKindGlow is FheOracle {
      * @dev Make a donation to a campaign with encrypted amount
      * @param _campaignId Campaign ID to donate to
      * @param _encryptedAmount Encrypted donation amount using FHE
+     * @param _inputProof Proof for the encrypted donation amount
      */
     function makeDonation(
         bytes32 _campaignId,
-        bytes memory _encryptedAmount
+        externalEuint32 _encryptedAmount,
+        bytes calldata _inputProof
     ) external onlyActiveCampaign(_campaignId) {
         Campaign storage campaign = campaigns[_campaignId];
+        
+        // Convert external ciphertext to internal encrypted type
+        euint32 encryptedDonationAmount = FHE.fromExternal(_encryptedAmount, _inputProof);
         
         // Create donation record
         Donation memory donation = Donation({
             donor: msg.sender,
             campaignId: _campaignId,
-            encryptedAmount: _encryptedAmount,
+            encryptedAmount: encryptedDonationAmount,
             timestamp: block.timestamp
         });
 
@@ -153,25 +164,20 @@ contract CipherKindGlow is FheOracle {
             campaign.donorCount++;
         }
 
-        // Update encrypted total (this would be done with FHE operations)
-        // For now, we store the encrypted amount
-        if (campaign.encryptedTotalRaised.length == 0) {
-            campaign.encryptedTotalRaised = _encryptedAmount;
-        } else {
-            // In a real implementation, this would use FHE addition
-            // For now, we concatenate the encrypted values
-            campaign.encryptedTotalRaised = abi.encodePacked(
-                campaign.encryptedTotalRaised,
-                _encryptedAmount
-            );
-        }
+        // Update encrypted total using FHE addition
+        campaign.encryptedTotalRaised = FHE.add(campaign.encryptedTotalRaised, encryptedDonationAmount);
+        
+        // Set ACL permissions for the encrypted amounts
+        FHE.allowThis(encryptedDonationAmount);
+        FHE.allow(encryptedDonationAmount, msg.sender);
+        FHE.allowThis(campaign.encryptedTotalRaised);
+        FHE.allow(campaign.encryptedTotalRaised, msg.sender);
 
         totalDonations++;
 
         emit DonationMade(
             msg.sender,
             _campaignId,
-            _encryptedAmount,
             block.timestamp
         );
     }
@@ -189,7 +195,6 @@ contract CipherKindGlow is FheOracle {
 
         emit CampaignCompleted(
             _campaignId,
-            campaign.encryptedTotalRaised,
             block.timestamp
         );
     }
@@ -197,7 +202,14 @@ contract CipherKindGlow is FheOracle {
     /**
      * @dev Get campaign information
      * @param _campaignId Campaign ID
-     * @return Campaign details
+     * @return id Campaign ID
+     * @return creator Campaign creator
+     * @return title Campaign title
+     * @return description Campaign description
+     * @return isActive Campaign active status
+     * @return createdAt Campaign creation timestamp
+     * @return completedAt Campaign completion timestamp
+     * @return donorCount Number of donors
      */
     function getCampaign(bytes32 _campaignId) external view returns (
         bytes32 id,
@@ -219,6 +231,23 @@ contract CipherKindGlow is FheOracle {
             campaign.createdAt,
             campaign.completedAt,
             campaign.donorCount
+        );
+    }
+
+    /**
+     * @dev Get encrypted campaign data
+     * @param _campaignId Campaign ID
+     * @return encryptedTargetAmount Encrypted target amount
+     * @return encryptedTotalRaised Encrypted total raised amount
+     */
+    function getCampaignEncryptedData(bytes32 _campaignId) external view returns (
+        euint32 encryptedTargetAmount,
+        euint32 encryptedTotalRaised
+    ) {
+        Campaign storage campaign = campaigns[_campaignId];
+        return (
+            campaign.encryptedTargetAmount,
+            campaign.encryptedTotalRaised
         );
     }
 

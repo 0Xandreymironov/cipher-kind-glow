@@ -1,6 +1,6 @@
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
-import EncryptedDonationBox from "@/components/EncryptedDonationBox";
+import RealCampaignBox from "@/components/RealCampaignBox";
 import Footer from "@/components/Footer";
 import { useGetCampaigns, useGetPlatformStats } from "@/hooks/useContract";
 import { useEffect, useState } from "react";
@@ -10,52 +10,14 @@ const Index = () => {
   const { stats } = useGetPlatformStats();
   const [displayCampaigns, setDisplayCampaigns] = useState<any[]>([]);
 
-  // Fallback sample data for demo purposes
-  const sampleDonations = [
-    {
-      title: "Clean Water Initiative",
-      description: "Bringing safe water to remote communities",
-      encryptedAmount: "0x7a9f2e1b8c5d...",
-      donorCount: 247,
-      icon: "droplets" as const,
-      progress: 73,
-      campaignId: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-    },
-    {
-      title: "Education for All",
-      description: "Supporting underprivileged children's education",
-      encryptedAmount: "0x3e8a7b4f9d2c...",
-      donorCount: 189,
-      icon: "book" as const,
-      progress: 56,
-      campaignId: "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
-    },
-    {
-      title: "Climate Action Fund",
-      description: "Protecting our planet for future generations",
-      encryptedAmount: "0xc4f1a8e6b3d9...",
-      donorCount: 312,
-      icon: "tree" as const,
-      progress: 89,
-      campaignId: "0x9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba",
-    },
-  ];
-
   useEffect(() => {
     if (campaigns && campaigns.length > 0) {
       // Convert contract campaigns to display format
       const formattedCampaigns = campaigns.map((campaignId: string, index: number) => ({
-        title: `Campaign ${index + 1}`,
-        description: "FHE-encrypted donation campaign",
-        encryptedAmount: "0x" + Math.random().toString(16).substring(2, 16) + "...",
-        donorCount: Math.floor(Math.random() * 500) + 50,
-        icon: ["droplets", "book", "tree", "globe", "zap", "star", "building"][index % 7] as const,
-        progress: Math.floor(Math.random() * 100),
         campaignId,
+        icon: ["droplets", "book", "tree", "globe", "zap", "star", "building"][index % 7] as const,
       }));
       setDisplayCampaigns(formattedCampaigns);
-    } else {
-      setDisplayCampaigns(sampleDonations);
     }
   }, [campaigns]);
 
@@ -84,10 +46,11 @@ const Index = () => {
                 <p className="text-muted-foreground">Loading campaigns...</p>
               </div>
             ) : (
-              displayCampaigns.map((donation, index) => (
-                <EncryptedDonationBox
+              displayCampaigns.map((campaign, index) => (
+                <RealCampaignBox
                   key={index}
-                  {...donation}
+                  campaignId={campaign.campaignId}
+                  icon={campaign.icon}
                 />
               ))
             )}

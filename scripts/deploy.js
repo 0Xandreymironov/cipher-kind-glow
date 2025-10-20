@@ -1,4 +1,5 @@
-const { ethers } = require("hardhat");
+import pkg from "hardhat";
+const { ethers } = pkg;
 
 async function main() {
   console.log("Deploying CipherKindGlow contract...");
@@ -13,13 +14,26 @@ async function main() {
   await cipherKindGlow.waitForDeployment();
 
   const contractAddress = await cipherKindGlow.getAddress();
-  
   console.log("CipherKindGlow deployed to:", contractAddress);
-  console.log("Deployment transaction hash:", cipherKindGlow.deploymentTransaction().hash);
+
+  // Verify the deployment
+  console.log("Contract deployed successfully!");
+  console.log("Contract address:", contractAddress);
+  console.log("Network:", await ethers.provider.getNetwork());
   
-  // Verify contract on Etherscan (optional)
-  console.log("\nTo verify the contract on Etherscan, run:");
-  console.log(`npx hardhat verify --network sepolia ${contractAddress}`);
+  // Save deployment info
+  const deploymentInfo = {
+    contractAddress,
+    network: (await ethers.provider.getNetwork()).name,
+    chainId: (await ethers.provider.getNetwork()).chainId,
+    deployer: (await ethers.getSigners())[0].address,
+    timestamp: new Date().toISOString()
+  };
+
+  console.log("\nDeployment Information:");
+  console.log(JSON.stringify(deploymentInfo, null, 2));
+
+  return contractAddress;
 }
 
 main()
